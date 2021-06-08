@@ -9,7 +9,6 @@ import SwiftUI
 
 struct EmojiArtDocumentView: View {
     @ObservedObject var document: EmojiArtDocument
-    
     @State private var chosenPalette: String = ""
     
     var body: some View {
@@ -22,11 +21,11 @@ struct EmojiArtDocumentView: View {
                             Text(emoji)
                                 .font(Font.system(size: defaultEmojiSize))
                                 .onDrag { NSItemProvider(object: emoji as NSString) }
-                        }
+                        } 
                     }
                 }
                 .onAppear { self.chosenPalette = document.defaultPalette }
-                Button(action: { document.clearData() }, label: { Text("Limpar") })
+//              Button(action: { document.clearData() }, label: { Text("Limpar") })
             }.padding(.horizontal)
             
             GeometryReader { geometry in
@@ -61,9 +60,38 @@ struct EmojiArtDocumentView: View {
                     location = CGPoint(x: location.x / self.zoomScale, y: location.y / self.zoomScale)
                     return drop(providers: providers, at: location)
                 }
-            }
+                .navigationBarItems(trailing: Button(action: {
+                    if let url = UIPasteboard.general.url, url != self.document.backgoundURL {
+                        confirmBackgroundPaste = true
+                    } else  {
+                        explaingBackgroundPaste = true
+                    }
+                }, label: {
+                    Image(systemName: "doc.on.clipboard").imageScale(.large)
+                        .alert(isPresented: $explaingBackgroundPaste) {
+                            Alert(
+                                title: Text("Colar Fundo"),
+                                message: Text("Esta URL da imagem que esta na área de transferência ja está como plano de fundo do seu documento."),
+                                dismissButton: .default(Text("OK"))
+                            )
+                        }
+                }))
+            }.zIndex(-1)
+        }
+        .alert(isPresented: $confirmBackgroundPaste) {
+            Alert(
+                title: Text("Colar Fundo"),
+                message: Text("Definir seu plano de fundo com \(UIPasteboard.general.url?.absoluteString ?? "nothing")?."),
+                primaryButton: .default(Text("OK")) {
+                    document.backgoundURL = UIPasteboard.general.url
+                },
+                secondaryButton: .cancel()
+            )
         }
     }
+    
+    @State private var explaingBackgroundPaste = false
+    @State private var confirmBackgroundPaste = false
     
     var isLoading: Bool {
         document.backgoundURL != nil && document.backgroundImage == nil
